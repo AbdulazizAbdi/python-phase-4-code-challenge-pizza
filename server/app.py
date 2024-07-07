@@ -24,30 +24,14 @@ api = Api(app)
 def index():
     return "<h1>Code challenge</h1>"
 
-@app.route('/restaurants')
-def restaurants():
+class Restaurants(Resource):
 
-    restaurants = [restaurant.to_dict() for restaurant in Restaurant.query.all()]
+    def get(self):
+        restaurants_list = [restaurant.to_dict() for restaurant in Restaurant.query.all()]
 
-    response = make_response(
-        games,
-        200
-    )
+        return restaurants_list, 200
 
-    return response
-
-#class Restaurants(Resource):
-
-    #def get(self):
-        #restaurants = [restaurant.to_dict() for restaurant in Restaurant.query.all()
-        #restaurants = []
-        #for restaurant in Restaurant.query.all():
-            #restaurant_dict = restaurant.to_dict()
-            #restaurants.append(restaurant_dict)
-
-        #return restaurants, 200
-
-#api.add_resource(Restaurants, '/restaurants')
+api.add_resource(Restaurants, '/restaurants')
 
 class RestaurantsByID(Resource):
 
@@ -56,7 +40,8 @@ class RestaurantsByID(Resource):
 
         if restaurant:
             response_dict = restaurant.to_dict()
-            return jsonify(response_dict), 200
+            response_dict['restaurant_pizzas'] = [rp.to_dict() for rp in restaurant.restaurant_pizzas]
+            return response_dict, 200
         else:
             return {"error": "Restaurant not found"}, 404
 
@@ -88,21 +73,21 @@ class RestaurantPizzas(Resource):
 
     def post(self):
 
-        new_restaurant_pizza = RestaurantPizza(
-            price=request.form['price'],
-            pizza_id=request.form['pizza_id'],
-            restaurant_id=request.form['restaurant_id'],
-        )
+        try:
+            new_restaurant_pizza = RestaurantPizza(
+                price=request.get_json()['price'],
+                pizza_id=request.get_json()['pizza_id'],
+                restaurant_id=request.get_json()['restaurant_id'],
+            )
 
-        if (1 <= new_restaurant_pizza.price <= 30):
             db.session.add(new_restaurant_pizza)
             db.session.commit()
 
             response_dict = new_restaurant_pizza.to_dict()
 
-            return jsonify(response_dict), 201
+            return response_dict, 201
 
-        else:
+        except ValueError as e:
             return {"errors": ["validation errors"]}, 400
 
 api.add_resource(RestaurantPizzas, '/restaurant_pizzas')
